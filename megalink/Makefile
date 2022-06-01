@@ -7,7 +7,7 @@ clean:
 	dotnet clean
 
 publish:
-	dotnet publish -r $(RUNTIME) -c Release -o bin
+	dotnet publish -r $(RUNTIME) --no-self-contained -c Release -o bin
 
 /usr/local/bin/megalink:
 	ln -s $(shell pwd)/bin/megalink
