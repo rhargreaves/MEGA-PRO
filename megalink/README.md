@@ -1,17 +1,25 @@
 # Megalink
 
-## Build (macOS)
+## Build
+
+The binary is output to `bin` folder:
+
+### Linux
+
+```sh
+make RUNTIME=linux-x64
+```
+
+## macOS
 
 ```sh
 make
 ```
 
-The binary is output to `bin` folder.
-
-## Install (macOS)
+## Install
 
 ```sh
-make install
+sudo make install
 ```
 
 Then you can run the tool by running `megalink` from anywhere.
