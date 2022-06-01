@@ -11,7 +11,6 @@ namespace megalink
     {
 
 
-
         static Edio edio;
         static Usbio usb;
         public static void start(string[] args, Edio io)
@@ -19,6 +18,13 @@ namespace megalink
 
             edio = io;
             usb = new Usbio(edio);
+            bool usr_fpga = false;
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                string s = args[i].ToLower().Trim();
+                if (s.EndsWith(".rbf")) usr_fpga = true;
+            }
 
 
             for (int i = 0; i < args.Length; i++)
@@ -29,6 +35,12 @@ namespace megalink
                 {
                     edio.hostReset(Edio.HOST_RST_SOFT);
                     continue;
+                }
+
+                if (s.Equals("-rtype"))//force reset type. mostly for using with mega-sg (-rtype hard)
+                {
+                    cmd_forceRstType(args[i + 1]);
+                    i += 1;
                 }
 
                 if (s.Equals("-recovery"))
@@ -85,7 +97,7 @@ namespace megalink
                     cmd_memRead(args[i + 1], args[i + 2], args[i + 3]);
                     i += 3;
                 }
-              
+
 
                 if (s.Equals("-verify"))
                 {
@@ -97,8 +109,7 @@ namespace megalink
 
                 if (s.EndsWith(".bin") || s.EndsWith(".gen") || s.EndsWith(".md") || s.EndsWith(".smd") || s.EndsWith(".32x") || s.EndsWith(".sms") || s.EndsWith(".nes"))
                 {
-                    //cmdMemWrite(args[i], "0");
-                    cmd_loadGame(s);
+                    cmd_loadGame(s, usr_fpga);
                     continue;
                 }
 
@@ -124,7 +135,7 @@ namespace megalink
 
         }
 
-       
+
         static int getNum(string num)
         {
 
@@ -141,7 +152,8 @@ namespace megalink
 
         static void rstControl(int addr)
         {
-            if(addr < Edio.ADDR_CFG)
+
+            if (addr < Edio.ADDR_CFG)
             {
                 edio.hostReset(Edio.HOST_RST_SOFT);
             }
@@ -155,7 +167,7 @@ namespace megalink
             addr = getNum(addr_str);
             len = getNum(len_str);
             if (len > 8192) len = 8192;
-            if(len % 16 != 0)
+            if (len % 16 != 0)
             {
                 len = (len / 16 + 1) * 16;
             }
@@ -184,7 +196,7 @@ namespace megalink
             edio.memRD(addr, mdata, 0, mdata.Length);
 
 
-            byte []fdata = File.ReadAllBytes(path);
+            byte[] fdata = File.ReadAllBytes(path);
 
             int cmp_len = Math.Min(mdata.Length, fdata.Length);
             for (int i = 0; i < cmp_len; i++)
@@ -232,15 +244,17 @@ namespace megalink
             byte[] fpga = File.ReadAllBytes(path);
 
             rstControl(0);
+            edio.flush();
+
             Console.Write("FPGA loading...");
             edio.fpgInit(fpga);
             Console.WriteLine("ok");
         }
 
-        static void cmd_loadGame(string path)
+        static void cmd_loadGame(string path, bool usr_fpga)
         {
             Console.Write("Load game...");
-            usb.loadGame(path);
+            usb.loadGame(path, usr_fpga);
             Console.WriteLine("ok");
         }
 
@@ -286,6 +300,24 @@ namespace megalink
             edio.flaWR(addr, data, 0, data.Length);
 
             Console.WriteLine("ok");
+        }
+
+        static void cmd_forceRstType(string type)
+        {
+            if (type.Equals("hard"))
+            {
+                edio.forceRstType(Edio.HOST_RST_HARD);
+            }
+
+            if (type.Equals("soft"))
+            {
+                edio.forceRstType(Edio.HOST_RST_SOFT);
+            }
+
+            if (type.Equals("off"))
+            {
+                edio.forceRstType(Edio.HOST_RST_OFF);
+            }
         }
 
     }
