@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.IO.Ports;
 using System.Threading;
 
 namespace megalink
 {
-
     public class FileInfo
     {
         public string name;
@@ -48,7 +44,7 @@ namespace megalink
         public const int ADDR_SRAM = 0x1000000;
         public const int ADDR_BRAM = 0x1080000;
         public const int ADDR_CFG = 0x1800000;
-        public const int ADDR_SSR  = 0x1802000;
+        public const int ADDR_SSR = 0x1802000;
         public const int ADDR_FIFO = 0x1810000;
 
         public const int SIZE_ROMX = 0x1000000;
@@ -67,9 +63,9 @@ namespace megalink
         public const byte FAT_OPEN_ALWAYS = 0x10;
         public const byte FAT_OPEN_APPEND = 0x30;
 
-        public const byte HOST_RST_OFF    = 0;
-        public const byte HOST_RST_SOFT   = 1;
-        public const byte HOST_RST_HARD   = 2;
+        public const byte HOST_RST_OFF = 0;
+        public const byte HOST_RST_SOFT = 1;
+        public const byte HOST_RST_HARD = 2;
 
         const byte CMD_STATUS = 0x10;
         const byte CMD_GET_MODE = 0x11;
@@ -142,8 +138,10 @@ namespace megalink
         {
             string[] ports = SerialPort.GetPortNames();
 
+            Console.WriteLine("Ports: " + ports.Length);
             for (int i = 0; i < ports.Length; i++)
             {
+                Console.Error.WriteLine(ports[i]);
                 try
                 {
                     openConnrction(ports[i]);
@@ -192,7 +190,7 @@ namespace megalink
             }
         }
 
-        //************************************************************************************************ 
+        //************************************************************************************************
 
         void tx32(int arg)
         {
@@ -354,7 +352,7 @@ namespace megalink
             port.Read(buff, 0, buff.Length);
         }
 
-        //************************************************************************************************ 
+        //************************************************************************************************
 
         void txCMD(byte cmd_code)
         {
@@ -738,7 +736,7 @@ namespace megalink
         }
 
 
-        
+
         public bool isServiceMode()
         {
             txCMD(CMD_GET_MODE);
@@ -866,7 +864,7 @@ namespace megalink
             throw new Exception("boot timeout");
         }
 
-       
+
     }
 
 
