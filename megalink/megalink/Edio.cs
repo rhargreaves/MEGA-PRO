@@ -137,11 +137,8 @@ namespace megalink
         void seek()
         {
             string[] ports = SerialPort.GetPortNames();
-
-            Console.WriteLine("Ports: " + ports.Length);
             for (int i = 0; i < ports.Length; i++)
             {
-                Console.Error.WriteLine(ports[i]);
                 try
                 {
                     openConnrction(ports[i]);
