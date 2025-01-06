@@ -843,6 +843,13 @@ namespace megalink
             force_rst = rst;
         }
 
+        public void updExec(int addr, int crc)
+        {
+            txCMD(CMD_UPD_EXEC);
+            tx32(addr);
+            tx32(crc);
+            tx8(0);//exec
+        }
         //************************************************************************************************ usb service mode. System enters in service mode if cart powered via usb only
         public void recovery()
         {

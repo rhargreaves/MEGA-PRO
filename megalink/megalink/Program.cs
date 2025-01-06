@@ -72,12 +72,12 @@ namespace megalink
             if (status.Length == 2)
             {
                 Console.WriteLine("");
-                Console.WriteLine("MCU status: " + status[1].ToString("X2"));
+                Console.WriteLine("EDIO status: " + status[1].ToString("X2"));
             }
             else
             {
                 Console.WriteLine(", Device ID: " + status[2].ToString("X2") + " (" + edio.getDeviceName(status[2]) + ")");
-                Console.WriteLine("MCU status: " + status[3].ToString("X2"));
+                Console.WriteLine("EDIO status: " + status[3].ToString("X2"));
             }
 
             Console.WriteLine("");

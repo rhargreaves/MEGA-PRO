@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Data;
 
 namespace megalink
 {
@@ -30,7 +31,7 @@ namespace megalink
                 string cmd = args[i].ToLower().Trim();
 
 
-                if (cmd.Equals("-netgate"))
+                if (cmd.Equals("-netgate"))//usb no network bridge
                 {
                     NetGate.start(io);
                 }
@@ -177,6 +178,19 @@ namespace megalink
                     cmd_screenshot();
                     continue;
                 }
+
+                if (cmd.Equals("-stest"))
+                {
+                    cmd_stest();
+                    continue;
+                }
+
+                if (cmd.Equals("-update"))//as recovery, but executed from bootloader. works without power down down
+                {
+                    cmd_update();
+                    return;//usb link will be lost. no more commands can be executed
+                }
+
             }
 
             if (usr_rom != null)
@@ -232,6 +246,30 @@ namespace megalink
                 return Convert.ToInt32(num);
             }
 
+        }
+
+        static byte[] getFileData(string path)
+        {
+            byte[] data = null;
+
+            if (path.ToLower().StartsWith("efu:"))
+            {
+                string efu_path = path.Substring(4);
+                efu_path = efu_path.Substring(0, efu_path.IndexOf("//"));
+
+                string file_path = path.Substring(path.IndexOf("//") + 2);
+                file_path = file_path.Replace("\\", "/");
+
+                data = new Datafile(efu_path).getFileData(file_path);
+
+            }
+            else
+            {
+                data = File.ReadAllBytes(path);
+            }
+
+
+            return data;
         }
 
         static void rstControl(int addr)
@@ -422,19 +460,12 @@ namespace megalink
 
         static void cmd_flashWrite(string addr_str, string path)
         {
-            int addr = 0;
+            
             Console.Write("Flash programming...");
 
-            if (addr_str.ToLower().Contains("0x"))
-            {
-                addr = Convert.ToInt32(addr_str, 16);
-            }
-            else
-            {
-                addr = Convert.ToInt32(addr_str);
-            }
+            int addr = getNum(addr_str);
 
-            byte[] data = File.ReadAllBytes(path);
+            byte[] data = getFileData(path);
 
             edio.flaWR(addr, data, 0, data.Length);
 
@@ -476,7 +507,12 @@ namespace megalink
             byte[] palette = new byte[128];
 
             usb.vramDump(vram, palette);
-            MenuImage.makeImage(DateTime.Now.ToString().Replace(":", "").Replace(" ", "_").Replace(".", "-") + ".png", vram, palette);
+            string path = DateTime.Now.ToString();
+            path = path.Replace(":", "");
+            path = path.Replace(" ", "_");
+            path = path.Replace(".", "-");
+            path = path.Replace("/", "-");
+            MenuImage.makeImage(path + ".png", vram, palette);
         }
 
         static void cmd_setTime()
@@ -509,7 +545,7 @@ namespace megalink
 
             if (arg == 5)
             {
-                Console.WriteLine("rtc deviation: " + sig + resp);
+                Console.WriteLine("rtc deviation: " + sig + resp + "ms");
             }
             else
             {
@@ -517,6 +553,36 @@ namespace megalink
             }
         }
 
+        static void cmd_stest()
+        {
+            byte[] buff = new byte[0x100000];
+            DateTime t;
+            long t_ms;
 
+            Console.Write("Read....");
+            t = DateTime.Now;
+            edio.memRD(0, buff, 0, buff.Length);
+            t_ms = (DateTime.Now.Ticks - t.Ticks) / 10000;
+            Console.WriteLine(buff.Length * 1000 / t_ms / 1024 + "KB/s");
+
+            Console.Write("Write...");
+            t = DateTime.Now;
+            edio.memWR(0, buff, 0, buff.Length);
+            t_ms = (DateTime.Now.Ticks - t.Ticks) / 10000;
+            Console.WriteLine(buff.Length * 1000 / t_ms / 1024 + "KB/s");
+        }
+
+        static void cmd_update()
+        {
+            Console.Write("EDIO core update...");
+
+            byte[] buff = new byte[4];
+            edio.flaRD(Edio.ADDR_FLA_ICOR + 4, buff, 0, buff.Length);
+
+            int crc = (buff[0] << 0) | (buff[1] << 8) | (buff[2] << 16) | (buff[3] << 24);
+            edio.updExec(Edio.ADDR_FLA_ICOR, crc);
+
+            Console.WriteLine("ok");
+        }
     }
 }

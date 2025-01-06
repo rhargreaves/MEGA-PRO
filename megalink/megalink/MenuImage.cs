@@ -33,27 +33,10 @@ namespace megalink
 
             renderImg(pic, pal32, pixels_a, pixels_b, shading);
 
-            //int[] rgb_a = getRgbPixels(pixels_a, pal32);
-            //int[] rgb_b = getRgbPixels(pixels_b, pal32);
-
-
-            /*
-
-            for (int i = 0; i < rgb_a.Length; i++)
-            {
-                int x = i % 320;
-                int y = i / 320;
-
-                int rgb = (rgb_a[i] & 0xff000000) == 0 ? rgb_b[i] : rgb_a[i];
-                if ((rgb & 0xff000000) == 0)
-                {
-                    rgb = pal32[0];
-                }
-
-                pic.SetPixel(x, y, Color.FromArgb(rgb));
-            }*/
-
+            Console.WriteLine("path: " + path);
             pic.Save(path);
+            //pic.Save("d:/img.png", System.Drawing.Imaging.ImageFormat.Png);
+
         }
 
 
