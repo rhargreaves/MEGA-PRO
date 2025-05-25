@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Net;
 using System.Net.Sockets;
-using System.IO;
 
 namespace megalink
 {
@@ -144,7 +139,7 @@ namespace megalink
             txByte(net_stream[con_idx].DataAvailable ? 1 : 0);
         }
 
-      
+
         static void cmd_WR()
         {
             byte con_idx = edio.rx8();
