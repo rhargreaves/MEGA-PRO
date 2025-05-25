@@ -149,6 +149,7 @@ namespace megalink
             {
                 try
                 {
+                    Console.WriteLine("Trying port: " + ports[i]);
                     openConnrction(ports[i]);
                     return;
                 }
@@ -173,14 +174,20 @@ namespace megalink
                 port.WriteTimeout = 2000;
                 return;
             }
-            catch (Exception) { }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine("Error opening port " + pname + ": " + e.Message);
+             }
 
 
             try
             {
                 port.Close();
             }
-            catch (Exception) { }
+            catch (Exception e)
+            {
+                 Console.Error.WriteLine("Error closing port " + pname + ": " + e.Message);
+            }
 
             port = null;
 

@@ -15,11 +15,8 @@ namespace megalink
 
         static void Main(string[] args)
         {
-
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-
             Console.WriteLine("megalink v" + Assembly.GetEntryAssembly().GetName().Version);
-
             try
             {
                 megalink(args);
@@ -31,17 +28,28 @@ namespace megalink
                 Console.WriteLine("ERROR: " + x.Message);
                 Console.ResetColor();
             }
-
         }
 
         static void megalink(string[] args)
         {
             try
             {
-                edio = new Edio();
+                var port = Environment.GetEnvironmentVariable("MEGALINK_PORT");
+                if (!string.IsNullOrEmpty(port))
+                {
+                    Console.WriteLine("Using MEGALINK_PORT environment variable: " + port);
+                    edio = new Edio(port);
+                }
+                else
+                {
+                    Console.WriteLine("MEGALINK_PORT environment variable not set, using default port.");
+                    edio = new Edio();
+                }
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Console.Error.WriteLine("Error initializing Edio: " + e.Message);
+                Console.Error.WriteLine("Retrying all ports in 500ms...");
                 System.Threading.Thread.Sleep(500);
                 edio = new Edio();
             }
