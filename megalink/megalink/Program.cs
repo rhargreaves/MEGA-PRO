@@ -37,12 +37,10 @@ namespace megalink
                 var port = Environment.GetEnvironmentVariable("MEGALINK_PORT");
                 if (!string.IsNullOrEmpty(port))
                 {
-                    Console.WriteLine("Using MEGALINK_PORT environment variable: " + port);
                     edio = new Edio(port);
                 }
                 else
                 {
-                    Console.WriteLine("MEGALINK_PORT environment variable not set, using default port.");
                     edio = new Edio();
                 }
             }
