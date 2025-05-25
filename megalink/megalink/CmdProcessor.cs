@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Data;
 
 namespace megalink
 {
@@ -13,93 +14,110 @@ namespace megalink
 
         static Edio edio;
         static Usbio usb;
+        static bool arst_off;
         public static void start(string[] args, Edio io)
         {
 
+            string usr_rom = null;
+            string usr_fpga = null;
+
             edio = io;
             usb = new Usbio(edio);
-            bool usr_fpga = false;
-
-            for (int i = 0; i < args.Length; i++)
-            {
-                string s = args[i].ToLower().Trim();
-                if (s.EndsWith(".rbf")) usr_fpga = true;
-            }
+            arst_off = false;
 
 
             for (int i = 0; i < args.Length; i++)
             {
-                string s = args[i].ToLower().Trim();
+                string cmd = args[i].ToLower().Trim();
 
-                if (s.Equals("-reset"))
+
+                if (cmd.Equals("-netgate"))//usb no network bridge
+                {
+                    NetGate.start(io);
+                }
+
+                if (cmd.Equals("-rstoff"))
+                {
+                    arst_off = true;//turn off automatic reset controller.
+                }
+
+                if (cmd.Equals("-reset"))
                 {
                     edio.hostReset(Edio.HOST_RST_SOFT);
                     continue;
                 }
 
-                if (s.Equals("-rtype"))//force reset type. mostly for using with mega-sg (-rtype hard)
+                if (cmd.Equals("-rtype"))//force reset type. mostly for using with mega-sg (-rtype hard)
                 {
                     cmd_forceRstType(args[i + 1]);
                     i += 1;
                 }
 
-                if (s.Equals("-recovery"))
+                if (cmd.Equals("-recovery"))
                 {
                     cmd_recovery();
                     continue;
                 }
 
-                if (s.Equals("-appmode"))
+                if (cmd.Equals("-appmode"))
                 {
                     cmd_exitServiceMode();
                     continue;
                 }
 
-                if (s.Equals("-sermode"))
+                if (cmd.Equals("-sermode"))
                 {
                     cmd_enterServiceMode();
                     continue;
                 }
 
-                if (s.Equals("-flawr"))
+                if (cmd.Equals("-flawr"))
                 {
                     cmd_flashWrite(args[i + 1], args[i + 2]);
                     i += 2;
                     continue;
                 }
 
-                if (s.Equals("-rtcset"))
+                if (cmd.Equals("-rtcset"))
                 {
-                    edio.rtcSet(DateTime.Now);
+                    cmd_setTime();
                     continue;
                 }
 
-                if (s.EndsWith(".rbf"))
+                if (cmd.Equals("-rtccal"))
                 {
-                    cmd_loadFpga(args[i]);
+                    cmd_rtcCal(args[i + 1]);
+                    i += 1;
                     continue;
                 }
 
-                if (s.StartsWith("-memprint"))
+                if (cmd.EndsWith("-fpga"))
+                {
+                    cmd_loadFpga(args[i + 1]);
+                    i += 1;
+                    continue;
+                }
+
+                if (cmd.StartsWith("-memprint"))
                 {
                     cmd_memPrint(args[i + 1], args[i + 2]);
                     i += 2;
                 }
 
-                if (s.StartsWith("-memwr"))
+                if (cmd.StartsWith("-memwr"))
                 {
                     cmd_memWrite(args[i + 1], args[i + 2]);
                     i += 2;
                 }
 
-                if (s.StartsWith("-memrd"))
+                if (cmd.StartsWith("-memrd"))
                 {
                     cmd_memRead(args[i + 1], args[i + 2], args[i + 3]);
                     i += 3;
                 }
 
 
-                if (s.Equals("-verify"))
+                if (cmd.Equals("-verify"))
                 {
                     cmd_verify(args[i + 1], args[i + 2], args[i + 3]);
                     i += 3;
@@ -107,27 +125,77 @@ namespace megalink
                 }
 
 
-                if (s.EndsWith(".bin") || s.EndsWith(".gen") || s.EndsWith(".md") || s.EndsWith(".smd") || s.EndsWith(".32x") || s.EndsWith(".sms") || s.EndsWith(".nes"))
-                {
-                    cmd_loadGame(s, usr_fpga);
-                    continue;
-                }
-
-                if (s.Equals("-cp"))
+                if (cmd.Equals("-cp"))
                 {
                     usb.copyFile(args[i + 1], args[i + 2]);
                     i += 2;
                     continue;
                 }
 
-                if (s.Equals("-mkdir"))
+                if (cmd.Equals("-mkdir"))
                 {
                     usb.makeDir(args[i + 1]);
                     i += 1;
                     continue;
                 }
 
+                if (cmd.EndsWith("-fpga"))
+                {
+                    cmd_loadFpga(args[i + 1]);
+                    i += 1;
+                    continue;
+                }
 
+                if (cmd.EndsWith("-install"))
+                {
+                    cmd_loadInstall(args[i + 1]);
+                    i += 1;
+                    continue;
+                }
+
+                if (cmd.EndsWith("-exec"))
+                {
+                    cmd_exec();
+                    continue;
+                }
+
+                //should be after all commands
+                if (cmd.EndsWith(".bin") || cmd.EndsWith(".gen") || cmd.EndsWith(".md") || cmd.EndsWith(".smd") || cmd.EndsWith(".32x") || cmd.EndsWith(".sms") || cmd.EndsWith(".nes"))
+                {
+                    usr_rom = args[i];
+                    continue;
+                }
+
+                if (isMapperFile(cmd))
+                {
+                    usr_fpga = args[i];
+                    continue;
+                }
+
+                if (cmd.Equals("-screen"))
+                {
+                    //this stuff only for taking screenshots for using in manual
+                    cmd_screenshot();
+                    continue;
+                }
+
+                if (cmd.Equals("-stest"))
+                {
+                    cmd_stest();
+                    continue;
+                }
+
+                if (cmd.Equals("-update"))//as recovery, but executed from bootloader. works without power down down
+                {
+                    cmd_update();
+                    return;//usb link will be lost. no more commands can be executed
+                }
+
+            }
+
+            if (usr_rom != null)
+            {
+                cmd_loadGame(usr_rom, usr_fpga);
             }
 
             edio.hostReset(Edio.HOST_RST_OFF);
@@ -135,6 +203,36 @@ namespace megalink
 
         }
 
+        static bool isMapperFile(string path)
+        {
+            string file_ext = Path.GetExtension(path).ToLower();
+
+            if (file_ext.Length != 4)
+            {
+                return false;
+            }
+
+            if (file_ext.EndsWith(".rbf"))
+            {
+                return true;
+            }
+
+            if (file_ext[0] != '.') return false;
+            if (file_ext[1] != 'x') return false;
+            try
+            {
+                int id = Convert.ToInt32(file_ext.Substring(2), 16);
+                //Console.WriteLine("id: " + id.ToString("X2"));
+            }
+            catch
+            {
+                return false;
+            }
+
+            return true;
+            //Console.WriteLine();
+            //return path.EndsWith(".rbf");
+        }
 
         static int getNum(string num)
         {
@@ -150,15 +248,60 @@ namespace megalink
 
         }
 
+        static byte[] getFileData(string path)
+        {
+            byte[] data = null;
+
+            if (path.ToLower().StartsWith("efu:"))
+            {
+                string efu_path = path.Substring(4);
+                efu_path = efu_path.Substring(0, efu_path.IndexOf("//"));
+
+                string file_path = path.Substring(path.IndexOf("//") + 2);
+                file_path = file_path.Replace("\\", "/");
+
+                data = new Datafile(efu_path).getFileData(file_path);
+
+            }
+            else
+            {
+                data = File.ReadAllBytes(path);
+            }
+
+
+            return data;
+        }
+
         static void rstControl(int addr)
         {
 
-            if (addr < Edio.ADDR_CFG)
+            if (arst_off) return;
+
+            if (addr < Edio.ADDR_SRAM)
             {
                 edio.hostReset(Edio.HOST_RST_SOFT);
             }
         }
 
+        static string getRbfName(string path, byte dev_id)
+        {
+            //do not replace if extension is not default .rbf
+            if (!Path.GetExtension(path).ToLower().Equals(".rbf"))
+            {
+                return path;
+            }
+
+            //do not replace for mega ed pro. it uses default rbf name
+            if (dev_id == Edio.DEVID_MEGAPRO)
+            {
+                return path;
+            }
+
+            //fpga streams extension matches to the device id
+            path = Path.ChangeExtension(path, ".x" + dev_id.ToString("X2"));
+
+            return path;
+        }
         static void cmd_memPrint(string addr_str, string len_str)
         {
             int addr;
@@ -251,10 +394,44 @@ namespace megalink
             Console.WriteLine("ok");
         }
 
-        static void cmd_loadGame(string path, bool usr_fpga)
+
+        static void cmd_loadGame(string game_path, string fpga_path)
         {
-            Console.Write("Load game...");
-            usb.loadGame(path, usr_fpga);
+
+            Console.WriteLine("Load game...");
+
+            string usb_home = "sd:usb-games";
+
+            byte dev_id = edio.getDeviceID();
+            usb.reset();
+            usb.makeDir(usb_home);
+
+            if (fpga_path != null)
+            {
+                usb_home += "/" + Path.GetFileName(game_path) + ".fpgrom";
+                usb.makeDir(usb_home);
+            }
+
+            string game_dst = usb_home + "/" + Path.GetFileName(game_path);
+
+            long time = DateTime.Now.Ticks;
+
+            usb.copyFile(game_path, game_dst);
+
+            time = (DateTime.Now.Ticks - time) / 10000;
+            Console.WriteLine("copy time: " + time);
+
+            if (fpga_path != null)
+            {
+                string fpga_dst = usb_home + "/" + Path.GetFileName(fpga_path);
+                //fpga_dst = getRbfName(fpga_dst, dev_id);
+                usb.copyFile(fpga_path, fpga_dst);
+            }
+
+            usb.appInstall(game_dst.Substring(3));
+            usb.appStart();
+
+            edio.getStatus();
             Console.WriteLine("ok");
         }
 
@@ -283,19 +460,12 @@ namespace megalink
 
         static void cmd_flashWrite(string addr_str, string path)
         {
-            int addr = 0;
+
             Console.Write("Flash programming...");
 
-            if (addr_str.ToLower().Contains("0x"))
-            {
-                addr = Convert.ToInt32(addr_str, 16);
-            }
-            else
-            {
-                addr = Convert.ToInt32(addr_str);
-            }
+            int addr = getNum(addr_str);
 
-            byte[] data = File.ReadAllBytes(path);
+            byte[] data = getFileData(path);
 
             edio.flaWR(addr, data, 0, data.Length);
 
@@ -320,5 +490,99 @@ namespace megalink
             }
         }
 
+        static void cmd_loadInstall(string path)
+        {
+            usb.appInstall(path);//path on sd card. equal to "start game from menu"
+            usb.appStart();
+        }
+
+        static void cmd_exec()
+        {
+            usb.appStart();//launch instaled game. equal to hit "star" on controller
+        }
+
+        static void cmd_screenshot()
+        {
+            byte[] vram = new byte[0x10000];
+            byte[] palette = new byte[128];
+
+            usb.vramDump(vram, palette);
+            string path = DateTime.Now.ToString();
+            path = path.Replace(":", "");
+            path = path.Replace(" ", "_");
+            path = path.Replace(".", "-");
+            path = path.Replace("/", "-");
+            MenuImage.makeImage(path + ".png", vram, palette);
+        }
+
+        static void cmd_setTime()
+        {
+
+            int sec = DateTime.Now.Second;
+            while (DateTime.Now.Second == sec) ;
+
+            edio.rtcSet(DateTime.Now);
+        }
+
+        static void cmd_rtcCal(string arg_str)
+        {
+            //arg-0: set time and abort calibraion
+            //arg-1: start calibration
+            //arg-2: finish calibration
+            //arg-3: get current calibration value
+            //arg-4: get estimated calibration value
+            //arg-5: get time deviation in ms
+
+            byte arg = (byte)Convert.ToInt32(arg_str);
+            int resp;
+
+            int sec = DateTime.Now.Second;
+            while (DateTime.Now.Second == sec) ;
+
+            resp = edio.rtcCal(DateTime.Now, arg);
+
+            string sig = resp > 0 ? "+" : "";
+
+            if (arg == 5)
+            {
+                Console.WriteLine("rtc deviation: " + sig + resp + "ms");
+            }
+            else
+            {
+                Console.WriteLine("rtc calibration: " + sig + resp);
+            }
+        }
+
+        static void cmd_stest()
+        {
+            byte[] buff = new byte[0x100000];
+            DateTime t;
+            long t_ms;
+
+            Console.Write("Read....");
+            t = DateTime.Now;
+            edio.memRD(0, buff, 0, buff.Length);
+            t_ms = (DateTime.Now.Ticks - t.Ticks) / 10000;
+            Console.WriteLine(buff.Length * 1000 / t_ms / 1024 + "KB/s");
+
+            Console.Write("Write...");
+            t = DateTime.Now;
+            edio.memWR(0, buff, 0, buff.Length);
+            t_ms = (DateTime.Now.Ticks - t.Ticks) / 10000;
+            Console.WriteLine(buff.Length * 1000 / t_ms / 1024 + "KB/s");
+        }
+
+        static void cmd_update()
+        {
+            Console.Write("EDIO core update...");
+
+            byte[] buff = new byte[4];
+            edio.flaRD(Edio.ADDR_FLA_ICOR + 4, buff, 0, buff.Length);
+
+            int crc = (buff[0] << 0) | (buff[1] << 8) | (buff[2] << 16) | (buff[3] << 24);
+            edio.updExec(Edio.ADDR_FLA_ICOR, crc);
+
+            Console.WriteLine("ok");
+        }
     }
 }
